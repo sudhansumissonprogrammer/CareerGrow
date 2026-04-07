@@ -7,9 +7,11 @@ import connectDB, { isDbConnected } from "./utils/db.js";
 import applicationRouter from "./routes/application.route.js";
 import companyRouter from "./routes/company.routes.js";
 import contactRouter from "./routes/contact.routes.js";
+import docsRouter from "./routes/docs.routes.js";
 import jobRouter from "./routes/job.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import { errorHandler, notFound } from "./middlewares/errorHandler.js";
+import { createRateLimiter } from "./middlewares/rateLimiter.js";
 
 dotenv.config();
 
@@ -25,6 +27,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
+app.use(createRateLimiter());
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -77,6 +80,7 @@ app.use("/api/v1/jobs", jobRouter);
 app.use("/api/v1/application", applicationRouter);
 app.use("/api/v1/applications", applicationRouter);
 app.use("/api/v1/contact", contactRouter);
+app.use("/api/v1/docs", docsRouter);
 
 app.use(notFound);
 app.use(errorHandler);

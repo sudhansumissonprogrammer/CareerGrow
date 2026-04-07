@@ -1,6 +1,7 @@
 import { Application } from "../models/application.model.js";
 import { Job } from "../models/job.model.js";
 import { User } from "../models/user.model.js";
+import { buildPaginationMeta, parsePagination } from "../utils/pagination.js";
 
 const normalizeRole = (role) => (role === "student" ? "user" : role);
 
@@ -55,7 +56,7 @@ export const applyjob = async (req, res) => {
       });
     }
 
-    const job = await Job.findById(jobId);
+    const job = await Job.findOne({ _id: jobId, isDeleted: false });
     if (!job) {
       return res.status(404).json({
         message: "job not found",
@@ -98,18 +99,27 @@ export const applyjob = async (req, res) => {
 export const getappliedjobs = async (req, res) => {
   try {
     const userId = req.id;
-    const applications = await Application.find({ userId })
-      .sort({ createdAt: -1 })
-      .populate({
-        path: "jobId",
-        options: { sort: { createdAt: -1 } },
-        populate: {
-          path: "company",
-        },
-      });
+    const { page, limit, skip } = parsePagination(req.query);
+    const query = { userId };
+    const [applications, total] = await Promise.all([
+      Application.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "jobId",
+          match: { isDeleted: false },
+          options: { sort: { createdAt: -1 } },
+          populate: {
+            path: "company",
+          },
+        }),
+      Application.countDocuments(query),
+    ]);
 
     return res.status(200).json({
-      applications,
+      applications: applications.filter((application) => application.jobId),
+      pagination: buildPaginationMeta({ page, limit, total }),
       success: true,
     });
   } catch (error) {
@@ -123,7 +133,8 @@ export const getappliedjobs = async (req, res) => {
 export const getadminapplicant = async (req, res) => {
   try {
     const jobId = req.params.jobId || req.params.id;
-    const job = await Job.findById(jobId).populate("company");
+    const { page, limit, skip } = parsePagination(req.query);
+    const job = await Job.findOne({ _id: jobId, isDeleted: false }).populate("company");
 
     if (!job) {
       return res.status(404).json({
@@ -139,13 +150,20 @@ export const getadminapplicant = async (req, res) => {
       });
     }
 
-    const applications = await Application.find({ jobId })
-      .sort({ createdAt: -1 })
-      .populate("userId");
+    const query = { jobId };
+    const [applications, total] = await Promise.all([
+      Application.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("userId"),
+      Application.countDocuments(query),
+    ]);
 
     return res.status(200).json({
       job,
       applications,
+      pagination: buildPaginationMeta({ page, limit, total }),
       success: true,
     });
   } catch (error) {
@@ -176,7 +194,7 @@ export const updateStatus = async (req, res) => {
       });
     }
 
-    const job = await Job.findById(application.jobId);
+    const job = await Job.findOne({ _id: application.jobId, isDeleted: false });
     if (!job || String(job.created_by) !== String(req.id)) {
       return res.status(403).json({
         success: false,

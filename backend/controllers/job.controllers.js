@@ -1,5 +1,6 @@
 import { Company } from "../models/company.model.js";
 import { Job } from "../models/job.model.js";
+import { buildPaginationMeta, parsePagination } from "../utils/pagination.js";
 
 const normalizeRequirements = (requirements, skills) => {
   const source = requirements ?? skills ?? [];
@@ -80,11 +81,12 @@ export const postjob = async (req, res) => {
 export const getalljobs = async (req, res) => {
   try {
     const { keyword = "", title = "", location = "", salary = "" } = req.query;
+    const { page, limit, skip } = parsePagination(req.query);
     const titleTerm = String(title || keyword).trim();
     const locationTerm = String(location).trim();
     const salaryLimit = Number(salary);
 
-    const andFilters = [];
+    const andFilters = [{ isDeleted: false }];
 
     if (titleTerm) {
       andFilters.push({
@@ -104,12 +106,19 @@ export const getalljobs = async (req, res) => {
       andFilters.push({ salary: { $gte: salaryLimit } });
     }
 
-    const query = andFilters.length > 0 ? { $and: andFilters } : {};
-
-    const jobs = await Job.find(query).populate("company").sort({ createdAt: -1 });
+    const query = { $and: andFilters };
+    const [jobs, total] = await Promise.all([
+      Job.find(query)
+        .populate("company")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Job.countDocuments(query),
+    ]);
 
     return res.status(200).json({
       jobs,
+      pagination: buildPaginationMeta({ page, limit, total }),
       success: true,
     });
   } catch (error) {
@@ -123,7 +132,7 @@ export const getalljobs = async (req, res) => {
 export const getjobbyid = async (req, res) => {
   try {
     const jobId = req.params.id;
-    const job = await Job.findById(jobId).populate("company");
+    const job = await Job.findOne({ _id: jobId, isDeleted: false }).populate("company");
 
     if (!job) {
       return res.status(404).json({
@@ -147,18 +156,61 @@ export const getjobbyid = async (req, res) => {
 export const getadminjob = async (req, res) => {
   try {
     const adminId = req.id;
-    const jobs = await Job.find({ created_by: adminId })
-      .populate("company")
-      .sort({ createdAt: -1 });
+    const { page, limit, skip } = parsePagination(req.query);
+    const includeDeleted = String(req.query.includeDeleted || "").toLowerCase() === "true";
+    const query = {
+      created_by: adminId,
+      ...(includeDeleted ? {} : { isDeleted: false }),
+    };
+    const [jobs, total] = await Promise.all([
+      Job.find(query)
+        .populate("company")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Job.countDocuments(query),
+    ]);
 
     return res.status(200).json({
       jobs,
+      pagination: buildPaginationMeta({ page, limit, total }),
       success: true,
     });
   } catch (error) {
     return res.status(500).json({
       message: error.message,
       success: false,
+    });
+  }
+};
+
+export const deleteJob = async (req, res) => {
+  try {
+    const job = await Job.findOne({
+      _id: req.params.id,
+      created_by: req.id,
+      isDeleted: false,
+    });
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: "Job not found",
+      });
+    }
+
+    job.isDeleted = true;
+    job.deletedAt = new Date();
+    await job.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Job deleted successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };
