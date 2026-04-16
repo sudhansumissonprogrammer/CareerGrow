@@ -184,7 +184,8 @@ Request body example:
   "title": "Frontend Developer",
   "description": "Build UI applications",
   "requirements": "React,JavaScript,HTML,CSS",
-  "salary": 1200000,
+  "salaryMin": 800000,
+  "salaryMax": 1200000,
   "location": "Bangalore",
   "jobtype": "Full Time",
   "experience": 2,
@@ -208,7 +209,7 @@ Search behavior:
 
 - `keyword` or `title` searches title, description, and requirements
 - `location` filters jobs by location
-- `salary` returns jobs with salary greater than or equal to the given value
+- `salary` returns jobs with minimum salary greater than or equal to the given value
 
 Pagination response includes:
 

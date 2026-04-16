@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { apiRequest } from "./api/client";
 import { useAuth } from "./context/AuthContext";
+import { useToast } from "./ToastContext.jsx";
 
 const formatSalary = (salary) => {
   const amount = Number(salary);
@@ -17,10 +18,10 @@ function JobDetails() {
   const { jobId } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [applyMessage, setApplyMessage] = useState("");
   const [applyLoading, setApplyLoading] = useState(false);
 
   useEffect(() => {
@@ -47,17 +48,16 @@ function JobDetails() {
     }
 
     if (user?.role !== "user") {
-      setApplyMessage("Only job seeker accounts can apply to jobs.");
+      showError("Only job seeker accounts can apply to jobs.");
       return;
     }
 
     try {
       setApplyLoading(true);
-      setApplyMessage("");
       const response = await apiRequest(`/api/v1/application/apply/${jobId}`, { method: "POST" });
-      setApplyMessage(response.message || "Application submitted successfully.");
+      showSuccess(response.message || "Application submitted successfully.");
     } catch (apiError) {
-      setApplyMessage(apiError.message);
+      showError(apiError.message);
     } finally {
       setApplyLoading(false);
     }
@@ -161,7 +161,6 @@ function JobDetails() {
               <button onClick={handleApply} disabled={applyLoading} className="skeuo-btn skeuo-btn-primary mt-6 w-full px-5 py-3.5 text-sm text-white">
                 {applyLoading ? "Applying..." : "Apply for this role"}
               </button>
-              {applyMessage && <p className="mt-4 text-sm text-slate-600">{applyMessage}</p>}
             </div>
 
             <div className="skeuo-surface p-6">

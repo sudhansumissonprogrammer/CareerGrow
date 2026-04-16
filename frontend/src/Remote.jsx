@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useToast } from './ToastContext.jsx';
 
 function Remote() {
   const remoteJobs = [
@@ -7,16 +8,18 @@ function Remote() {
     { id: 2, title: 'Backend Developer', company: 'CloudSystems', time: 'Contract' },
   ];
 
+  const { showSuccess, showError } = useToast();
+
   const handleApply = (job) => {
     const appliedJobs = JSON.parse(localStorage.getItem('appliedJobs')) || [];
     const isApplied = appliedJobs.some((appliedJob) => appliedJob.id === job.id);
 
     if (isApplied) {
-      alert(`You have already applied for "${job.title}".`);
+      showError(`You have already applied for "${job.title}".`);
     } else {
       appliedJobs.push(job);
       localStorage.setItem('appliedJobs', JSON.stringify(appliedJobs));
-      alert(`Application for "${job.title}" was successful!`);
+      showSuccess(`Application for "${job.title}" was successful!`);
     }
   };
 

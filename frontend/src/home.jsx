@@ -24,24 +24,39 @@ const detectCategory = (job) => {
   return "General";
 };
 
+const formatMetric = (value) => {
+  if (!value || value <= 0) return "0";
+  if (value >= 1000) return `${Math.floor(value / 1000)}k+`;
+  return `${value}+`;
+};
+
 function Home() {
   const navigate = useNavigate();
   const { keyword, setKeyword, location, setLocation } = useJobSearch();
   const [jobs, setJobs] = useState([]);
   const [companies, setCompanies] = useState([]);
+  const [siteStats, setSiteStats] = useState({ companies: 0, students: 0, jobSeekers: 0 });
 
   useEffect(() => {
     const loadHomeData = async () => {
       try {
-        const [jobsResponse, companiesResponse] = await Promise.all([
+        const [jobsResponse, companiesResponse, statsResponse] = await Promise.all([
           apiRequest("/api/v1/job/get"),
           apiRequest("/api/v1/company/get"),
+          apiRequest("/api/v1/stats"),
         ]);
+
         setJobs(jobsResponse.jobs || []);
         setCompanies(companiesResponse.companies || []);
+        setSiteStats({
+          companies: Number(statsResponse.companies) || 0,
+          students: Number(statsResponse.students) || 0,
+          jobSeekers: Number(statsResponse.jobSeekers) || 0,
+        });
       } catch {
         setJobs([]);
         setCompanies([]);
+        setSiteStats({ companies: 0, students: 0, jobSeekers: 0 });
       }
     };
 
@@ -70,77 +85,60 @@ function Home() {
 
   return (
     <div className="skeuo-page">
-      <div className="page-wrap pt-28">
-        <section className="page-hero px-6 py-8 md:px-10 md:py-12">
-          <div className="grid items-center gap-8 lg:grid-cols-[1.15fr_0.85fr]">
-            <div>
-              <span className="page-kicker">Live Career Network</span>
-              <h1 className="section-title mt-5 max-w-3xl">
-                Designed for ambitious candidates and fast-moving teams.
-              </h1>
-              <p className="section-subtitle mt-5">
-                Discover verified openings, apply in minutes, and manage your progress in one refined workspace built around
-                real backend data.
-              </p>
+      <div className="page-wrap">
+        <section 
+          className="page-hero relative min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: 'url("https://images.unsplash.com/photo-1552664730-d307ca884978?w=1600&q=80")',
+            backgroundAttachment: 'fixed'
+          }}
+        >
+          {/* Dark overlay for text readability */}
+          <div className="absolute inset-0 bg-black/40"></div>
+          
+          <div className="relative z-10 w-full text-center px-6">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-6 max-w-4xl mx-auto leading-tight">
+              Find Jobs That Match Your Skills
+            </h1>
+            <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto">
+              Apply to verified jobs from startups to top companies – faster and smarter.
+            </p>
 
-              <div className="skeuo-banner mt-8 flex flex-col gap-3 p-4 md:flex-row md:items-center">
-                <input
-                  className="skeuo-input w-full"
-                  placeholder="Search job title or keyword"
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                />
-                <input
-                  className="skeuo-input w-full md:max-w-xs"
-                  placeholder="Location or Remote"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                />
-                <button className="skeuo-btn skeuo-btn-primary px-6 py-3 text-sm text-white" onClick={() => navigate("/jobs")}>
-                  Explore Jobs
-                </button>
-              </div>
-
-              <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                <div className="metric-card p-4">
-                  <p className="text-3xl font-extrabold">{jobs.length}</p>
-                  <p className="mt-1 text-sm text-slate-600">Open roles synced from backend</p>
-                </div>
-                <div className="metric-card p-4">
-                  <p className="text-3xl font-extrabold">{companies.length}</p>
-                  <p className="mt-1 text-sm text-slate-600">Companies hiring right now</p>
-                </div>
-                <div className="metric-card p-4">
-                  <p className="text-3xl font-extrabold">24h</p>
-                  <p className="mt-1 text-sm text-slate-600">A typical recruiter reply window</p>
-                </div>
-              </div>
+            {/* Search Bar */}
+            <div className="flex flex-col md:flex-row gap-3 max-w-3xl mx-auto mb-12">
+              <input
+                className="flex-1 px-6 py-4 rounded-lg bg-white/95 placeholder-slate-400 text-slate-900 font-medium focus:outline-none"
+                placeholder="Job title or keyword"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+              />
+              <input
+                className="flex-1 px-6 py-4 rounded-lg bg-white/95 placeholder-slate-400 text-slate-900 font-medium focus:outline-none"
+                placeholder="Location or Remote"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
+              <button 
+                className="px-8 py-4 rounded-lg bg-slate-900 text-white font-bold hover:bg-slate-800 transition whitespace-nowrap"
+                onClick={() => navigate("/jobs")}
+              >
+                Search Jobs
+              </button>
             </div>
 
-            <div className="grid gap-4">
-              <div className="skeuo-card p-6">
-                <p className="text-xs font-extrabold uppercase tracking-[0.25em] text-slate-500">Weekly Momentum</p>
-                <div className="mt-5 grid gap-3">
-                  {[
-                    ["Applications sent", "128"],
-                    ["Interviews scheduled", "34"],
-                    ["Recruiters active", "72"],
-                  ].map(([label, value]) => (
-                    <div key={label} className="skeuo-card-inset flex items-center justify-between px-4 py-3">
-                      <span className="text-sm text-slate-600">{label}</span>
-                      <span className="text-lg font-extrabold text-slate-900">{value}</span>
-                    </div>
-                  ))}
-                </div>
+            {/* Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+              <div className="bg-white/90 backdrop-blur rounded-lg p-8">
+                <p className="text-3xl md:text-4xl font-extrabold text-slate-900">{formatMetric(siteStats.jobSeekers)}</p>
+                <p className="text-slate-600 font-medium mt-2">Active Job Seekers</p>
               </div>
-
-              <div className="skeuo-card p-6">
-                <p className="text-xs font-extrabold uppercase tracking-[0.25em] text-slate-500">Why It Feels Better</p>
-                <ul className="mt-4 space-y-3 text-sm leading-7 text-slate-600">
-                  <li>Applications, jobs, companies, and recruiter actions are all connected to the backend.</li>
-                  <li>The interface is optimized for scanning, focus, and quick decision-making.</li>
-                  <li>Both job seekers and recruiters get role-specific dashboards and flows.</li>
-                </ul>
+              <div className="bg-white/90 backdrop-blur rounded-lg p-8">
+                <p className="text-3xl md:text-4xl font-extrabold text-slate-900">{formatMetric(siteStats.companies)}</p>
+                <p className="text-slate-600 font-medium mt-2">Hiring Companies</p>
+              </div>
+              <div className="bg-white/90 backdrop-blur rounded-lg p-8">
+                <p className="text-3xl md:text-4xl font-extrabold text-slate-900">Fast</p>
+                <p className="text-slate-600 font-medium mt-2">Hiring Process</p>
               </div>
             </div>
           </div>

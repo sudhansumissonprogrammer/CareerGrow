@@ -4,13 +4,26 @@ import { apiRequest, buildAssetUrl } from "./api/client";
 import { useAuth } from "./context/AuthContext";
 
 const formatSalary = (salary) => {
-  const amount = Number(salary);
-  if (!Number.isFinite(amount) || amount <= 0) return "Salary not specified";
-  return new Intl.NumberFormat("en-IN", {
+  if (!salary || typeof salary !== 'object') return "Salary not specified";
+  const min = Number(salary.min);
+  const max = Number(salary.max);
+  if (!Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max <= 0) return "Salary not specified";
+  if (min === max) {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(min);
+  }
+  return `${new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(min)} - ${new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(max)}`;
 };
 
 const StatCard = ({ label, value, note }) => (

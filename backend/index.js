@@ -9,9 +9,9 @@ import companyRouter from "./routes/company.routes.js";
 import contactRouter from "./routes/contact.routes.js";
 import docsRouter from "./routes/docs.routes.js";
 import jobRouter from "./routes/job.routes.js";
+import statsRouter from "./routes/stats.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import { errorHandler, notFound } from "./middlewares/errorHandler.js";
-import { createRateLimiter } from "./middlewares/rateLimiter.js";
 
 dotenv.config();
 
@@ -27,7 +27,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
-app.use(createRateLimiter());
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -58,7 +57,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use((req, res, next) => {
-  const bypassPaths = ["/health", "/api/v1/contact"];
+  const bypassPaths = ["/health", "/api/v1/contact", "/api/v1/job"];
   if (bypassPaths.includes(req.path)) {
     return next();
   }
@@ -79,6 +78,7 @@ app.use("/api/v1/job", jobRouter);
 app.use("/api/v1/jobs", jobRouter);
 app.use("/api/v1/application", applicationRouter);
 app.use("/api/v1/applications", applicationRouter);
+app.use("/api/v1/stats", statsRouter);
 app.use("/api/v1/contact", contactRouter);
 app.use("/api/v1/docs", docsRouter);
 

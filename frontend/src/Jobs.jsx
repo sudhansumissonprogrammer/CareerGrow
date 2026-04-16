@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiRequest } from "./api/client";
 import { useAuth } from "./context/AuthContext";
 import { useJobSearch } from "./JobSearchContext";
+import { useToast } from "./ToastContext.jsx";
 
 const formatSalary = (salary) => {
   const amount = Number(salary);
@@ -41,10 +42,10 @@ function Jobs() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { keyword, location } = useJobSearch();
   const { user, isAuthenticated } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [actionMessage, setActionMessage] = useState("");
   const [applyingJobId, setApplyingJobId] = useState("");
   const selectedCategory = searchParams.get("category") || "All";
 
@@ -101,17 +102,16 @@ function Jobs() {
     }
 
     if (user?.role !== "user") {
-      setActionMessage("Only job seeker accounts can apply to jobs.");
+      showError("Only job seeker accounts can apply to jobs.");
       return;
     }
 
     try {
       setApplyingJobId(jobId);
-      setActionMessage("");
       const response = await apiRequest(`/api/v1/application/apply/${jobId}`, { method: "POST" });
-      setActionMessage(response.message || "Application submitted successfully.");
+      showSuccess(response.message || "Application submitted successfully.");
     } catch (apiError) {
-      setActionMessage(apiError.message);
+      showError(apiError.message);
     } finally {
       setApplyingJobId("");
     }
@@ -135,7 +135,6 @@ function Jobs() {
           </p>
         </section>
 
-        {actionMessage && <div className="mt-6 rounded-2xl bg-[rgba(255,248,239,0.9)] px-5 py-4 text-sm text-slate-700 shadow-[0_12px_24px_rgba(20,32,51,0.06)]">{actionMessage}</div>}
 
         <section className="mt-8">
           <div className="mb-5 flex flex-wrap gap-3">
